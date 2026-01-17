@@ -290,16 +290,16 @@
                     <h4 class="text-lg font-bold mb-4">Contatos</h4>
                     <ul class="space-y-2 text-gray-400">
                         <li><i class="fa-solid fa-location-dot w-6 text-brand"></i> Rua dos Pets, 123 - Centro</li>
-                        <li><i class="fa-brands fa-whatsapp w-6 text-brand"></i> (82) 99309-1738</li>
+                        <li><i class="fa-brands fa-whatsapp w-6 text-brand"></i> (11) 99999-9999</li>
                         <li><i class="fa-solid fa-envelope w-6 text-brand"></i> contato@pethappy.com.br</li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="text-lg font-bold mb-4">Siga-nos</h4>
                     <div class="flex gap-4">
-                        <a href="https://wa.me/5582993091738" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-brand transition"><i class="fa-brands fa-instagram"></i></a>
-                        <a href="https://wa.me/5582993091738" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-blue-600 transition"><i class="fa-brands fa-facebook-f"></i></a>
-                        <a href="https://wa.me/5582993091738" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-green-500 transition"><i class="fa-brands fa-whatsapp"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-brand transition"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-blue-600 transition"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-green-500 transition"><i class="fa-brands fa-whatsapp"></i></a>
                     </div>
                     <div class="mt-8">
                         <button onclick="openAdminModal()" class="text-xs text-gray-500 hover:text-white underline">
@@ -315,7 +315,7 @@
     </footer>
 
     <!-- Floating WhatsApp Button -->
-    <a href="https://wa.me/5582993091738" target="_blank" class="fixed bottom-6 right-6 z-50 group">
+    <a href="https://wa.me/5511999999999" target="_blank" class="fixed bottom-6 right-6 z-50 group">
         <div class="absolute -top-10 right-0 bg-white text-gray-800 px-3 py-1 rounded-lg shadow-md text-sm font-bold opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
             Fale Conosco!
         </div>
@@ -454,7 +454,7 @@
         function renderApp() {
             renderServicesGrid();
             renderBookingOptions();
-            renderAdminPanel();
+            renderAdminLists(); // FIXED: Changed from renderAdminPanel() to renderAdminLists()
         }
 
         // 1. Render Services Grid on Homepage
@@ -538,8 +538,49 @@
 
         function handleBooking(e) {
             e.preventDefault();
-            // In a real app, this would send data to a backend
-            showToast('Agendamento realizado com sucesso! Aguarde nosso contato.');
+            
+            // Coletar dados do formulário
+            const serviceSelect = document.getElementById('service-select');
+            const serviceName = serviceSelect.options[serviceSelect.selectedIndex].text.split(' - ')[0];
+            const servicePrice = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
+            
+            // Tentar pegar o valor do radio button checado com segurança
+            const staffInput = document.querySelector('input[name="staff"]:checked');
+            const staff = staffInput ? staffInput.value : 'Sem preferência';
+
+            const date = e.target.querySelector('input[type="date"]').value;
+            const time = e.target.querySelector('input[type="time"]').value;
+            
+            // Pegar o nome do pagamento (navegando pelo DOM do label customizado)
+            const paymentInput = document.querySelector('input[name="payment"]:checked');
+            let payment = 'A combinar';
+            if (paymentInput) {
+                // O texto está dentro de um span dentro da div irmã do input
+                const paymentLabelDiv = paymentInput.nextElementSibling;
+                payment = paymentLabelDiv.querySelector('span').innerText;
+            }
+
+            // Formatar data para o padrão brasileiro
+            const dataParts = date.split('-');
+            const dataFormatada = `${dataParts[2]}/${dataParts[1]}/${dataParts[0]}`;
+
+            // Criar a mensagem
+            const msg = `Olá! Gostaria de agendar um horário no PetHappy:%0A` +
+                        `🐶 *Serviço:* ${serviceName} (R$ ${servicePrice})%0A` +
+                        `👤 *Profissional:* ${staff}%0A` +
+                        `📅 *Data:* ${dataFormatada} às ${time}%0A` +
+                        `💳 *Pagamento:* ${payment}%0A%0A` +
+                        `Aguardo confirmação!`;
+
+            // Número do WhatsApp da Loja (Substitua pelo seu número real)
+            const phone = "5511999999999"; 
+            
+            // Criar Link e Abrir
+            const url = `https://wa.me/${phone}?text=${msg}`;
+            window.open(url, '_blank');
+
+            showToast('Redirecionando para o WhatsApp...');
+            
             e.target.reset();
             document.getElementById('booking-summary').classList.add('hidden');
         }
