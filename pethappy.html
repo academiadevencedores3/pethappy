@@ -399,7 +399,7 @@
                     <!-- Payment Tab -->
                     <div id="tab-payment" class="tab-content hidden">
                         <h3 class="font-bold text-lg mb-4">Métodos de Pagamento Aceitos</h3>
-                        <div id="admin-payment-list" class="grid grid-cols-2 gap-4">
+                        <div id="admin-payment-list" class="grid grid-cols-1 gap-y-4">
                             <!-- Injected via JS -->
                         </div>
                     </div>
@@ -437,24 +437,33 @@
                 { id: 4, name: 'Dra. Julia', role: 'Fisioterapeuta' }
             ],
             payments: [
-                { id: 'pix', name: 'PIX', active: true, icon: 'fa-qrcode' },
-                { id: 'credit', name: 'Cartão Crédito', active: true, icon: 'fa-credit-card' },
-                { id: 'debit', name: 'Cartão Débito', active: true, icon: 'fa-credit-card' },
-                { id: 'cash', name: 'Dinheiro', active: true, icon: 'fa-money-bill-wave' },
-                { id: 'usdt', name: 'USDT (Tether)', active: false, icon: 'fa-coins' },
-                { id: 'btc', name: 'Bitcoin / Crypto', active: false, icon: 'fa-bitcoin' }
+                { id: 'pix', name: 'PIX', active: true, icon: 'fa-qrcode', details: 'chave-pix-aqui' },
+                { id: 'credit', name: 'Cartão Crédito', active: true, icon: 'fa-credit-card', details: 'Aceitamos Visa, Master, etc' },
+                { id: 'debit', name: 'Cartão Débito', active: true, icon: 'fa-credit-card', details: 'Aceitamos Visa, Master, etc' },
+                { id: 'cash', name: 'Dinheiro', active: true, icon: 'fa-money-bill-wave', details: 'Pagamento no local' },
+                { id: 'usdt_bep20', name: 'USDT (BEP-20)', active: false, icon: 'fa-coins', details: '0x...' },
+                { id: 'usdt_polygon', name: 'USDT (Polygon)', active: false, icon: 'fa-coins', details: '0x...' },
+                { id: 'crypto', name: 'Outras Criptos', active: false, icon: 'fa-bitcoin', details: 'BTC, ETH, etc' }
             ]
         };
 
         // Initialize Data (Load from LocalStorage or use Default)
         let appData = JSON.parse(localStorage.getItem('petShopData')) || defaultData;
+        // Ensure old data structure gets updated with 'details'
+        if (appData.payments.some(p => !p.hasOwnProperty('details'))) {
+            appData.payments.forEach((p, index) => {
+                const defaultPayment = defaultData.payments.find(dp => dp.id === p.id);
+                p.details = defaultPayment ? defaultPayment.details : '';
+            });
+        }
+
 
         // --- RENDER FUNCTIONS ---
 
         function renderApp() {
             renderServicesGrid();
             renderBookingOptions();
-            renderAdminLists(); // FIXED: Changed from renderAdminPanel() to renderAdminLists()
+            renderAdminLists();
         }
 
         // 1. Render Services Grid on Homepage
@@ -544,38 +553,41 @@
             const serviceName = serviceSelect.options[serviceSelect.selectedIndex].text.split(' - ')[0];
             const servicePrice = serviceSelect.options[serviceSelect.selectedIndex].getAttribute('data-price');
             
-            // Tentar pegar o valor do radio button checado com segurança
             const staffInput = document.querySelector('input[name="staff"]:checked');
             const staff = staffInput ? staffInput.value : 'Sem preferência';
 
             const date = e.target.querySelector('input[type="date"]').value;
             const time = e.target.querySelector('input[type="time"]').value;
             
-            // Pegar o nome do pagamento (navegando pelo DOM do label customizado)
             const paymentInput = document.querySelector('input[name="payment"]:checked');
-            let payment = 'A combinar';
+            let paymentText = 'A combinar';
+            let paymentDetailsText = '';
+
             if (paymentInput) {
-                // O texto está dentro de um span dentro da div irmã do input
-                const paymentLabelDiv = paymentInput.nextElementSibling;
-                payment = paymentLabelDiv.querySelector('span').innerText;
+                const paymentId = paymentInput.value;
+                const selectedPayment = appData.payments.find(p => p.id === paymentId);
+                
+                if (selectedPayment) {
+                    paymentText = selectedPayment.name;
+                    if (selectedPayment.details && (paymentId.includes('pix') || paymentId.includes('usd') || paymentId.includes('crypto'))) {
+                        paymentDetailsText = `%0A%0A*Instruções de Pagamento (${selectedPayment.name}):*%0A${encodeURIComponent(selectedPayment.details)}`;
+                    }
+                }
             }
 
-            // Formatar data para o padrão brasileiro
             const dataParts = date.split('-');
             const dataFormatada = `${dataParts[2]}/${dataParts[1]}/${dataParts[0]}`;
 
-            // Criar a mensagem
             const msg = `Olá! Gostaria de agendar um horário no PetHappy:%0A` +
                         `🐶 *Serviço:* ${serviceName} (R$ ${servicePrice})%0A` +
                         `👤 *Profissional:* ${staff}%0A` +
                         `📅 *Data:* ${dataFormatada} às ${time}%0A` +
-                        `💳 *Pagamento:* ${payment}%0A%0A` +
+                        `💳 *Pagamento:* ${paymentText}` +
+                        `${paymentDetailsText}%0A%0A` +
                         `Aguardo confirmação!`;
 
-            // Número do WhatsApp da Loja (Substitua pelo seu número real)
             const phone = "5511999999999"; 
             
-            // Criar Link e Abrir
             const url = `https://wa.me/${phone}?text=${msg}`;
             window.open(url, '_blank');
 
@@ -598,7 +610,6 @@
 
         function openAdminModal() {
             document.getElementById('admin-modal').classList.remove('hidden');
-            // Check if already logged in (simulated session)
             if(sessionStorage.getItem('adminLogged') === 'true') {
                 document.getElementById('admin-login').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
@@ -620,7 +631,7 @@
             if (user === 'admin' && pass === '1234') {
                 sessionStorage.setItem('adminLogged', 'true');
                 document.getElementById('login-error').classList.add('hidden');
-                openAdminModal(); // Will route to dashboard
+                openAdminModal();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
             }
@@ -628,21 +639,17 @@
 
         function logout() {
             sessionStorage.removeItem('adminLogged');
-            openAdminModal(); // Will route to login
+            openAdminModal();
         }
 
         function switchTab(tabName) {
-            // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            // Remove active style from buttons
             document.querySelectorAll('#admin-dashboard button.border-b-2').forEach(el => {
                 el.classList.remove('border-b-2', 'border-brand', 'font-bold', 'text-brand');
                 el.classList.add('text-gray-500');
             });
             
-            // Show selected
             document.getElementById('tab-' + tabName).classList.remove('hidden');
-            // Style button (simple heuristic based on onclick content)
             const btns = document.querySelectorAll('#admin-dashboard button');
             btns.forEach(btn => {
                 if(btn.getAttribute('onclick')?.includes(tabName)) {
@@ -673,15 +680,27 @@
 
             // Render Payment Toggles
             document.getElementById('admin-payment-list').innerHTML = appData.payments.map((p, index) => `
-                <div class="flex items-center justify-between bg-gray-50 p-3 rounded border ${p.active ? 'border-green-300 bg-green-50' : ''}">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid ${p.icon}"></i>
-                        <span>${p.name}</span>
+                <div class="bg-gray-50 p-3 rounded border ${p.active ? 'border-green-300 bg-green-50' : 'border-gray-200'}">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid ${p.icon} text-lg"></i>
+                            <span class="font-bold">${p.name}</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" ${p.active ? 'checked' : ''} onchange="togglePayment(${index})" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand"></div>
+                        </label>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" ${p.active ? 'checked' : ''} onchange="togglePayment(${index})" class="sr-only peer">
-                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand"></div>
-                    </label>
+                    <div>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Chave PIX, endereço da carteira, etc." 
+                            value="${p.details || ''}" 
+                            onchange="updatePaymentData(${index}, 'details', this.value)" 
+                            class="w-full border p-2 rounded mt-1 text-sm ${p.active ? 'opacity-100' : 'opacity-50'}"
+                            ${p.active ? '' : 'disabled'}
+                        >
+                    </div>
                 </div>
             `).join('');
         }
@@ -720,6 +739,10 @@
         function togglePayment(index) {
             appData.payments[index].active = !appData.payments[index].active;
             renderAdminLists();
+        }
+
+        function updatePaymentData(index, field, value) {
+            appData.payments[index][field] = value;
         }
 
         function saveChanges() {
